@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>老後資金コンサルティング</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #1a2744;
+    --navy-sub: #3d4f6e;
+    --label: #4a5e78;
+    --card: #dce4f0;
+    --border: #d0d8e8;
+    --bg: #888888;
+    --accent: #6b9eff;
+    --red: #dc2626;
+    --green: #15803d;
+  }
+  body {
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh;
+    font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    padding-bottom: 70px;
+  }
+  .slide-wrapper {
+    width: 1280px; height: 720px;
+    position: relative;
+    transform-origin: center center;
+  }
+  .slide-container { width: 100%; height: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    background: #ffffff;
+    display: none; opacity: 0;
+    transition: opacity 0.25s ease;
+    overflow: hidden;
+  }
+  .slide.active { display: flex; opacity: 1; }
+  .slide::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 10px; background: var(--navy);
+  }
+  .slide-inner {
+    width: 100%; height: 100%;
+    padding: 26px 60px 22px 64px;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+
+  /* ---- header / tabs ---- */
+  .tabs {
+    display: flex; gap: 0; border-bottom: 2px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .tab {
+    font-size: 16px; font-weight: 800; color: #9aa5b4;
+    padding: 6px 22px 12px; letter-spacing: 0.04em;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+  }
+  .tab.on { color: var(--navy); border-bottom-color: var(--navy); }
+
+  .category {
+    font-size: 13px; font-weight: 800;
+    letter-spacing: 0.22em; color: var(--navy);
+    margin-bottom: 8px; text-transform: uppercase;
+  }
+  .slide-title {
+    font-size: 30px; font-weight: 800;
+    color: var(--navy); line-height: 1.25; margin-bottom: 4px;
+  }
+  .slide-sub { font-size: 14px; color: var(--navy-sub); margin-bottom: 10px; line-height: 1.5; }
+
+  /* ---- input form ---- */
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 5px 40px;
+  }
+  .field {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 5px 0; border-bottom: 1px solid #eef1f6;
+  }
+  .field label { font-size: 15px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .field .unit { font-size: 13px; color: var(--label); margin-left: 6px; }
+  .field input {
+    width: 150px; font-size: 16px; font-weight: 700; color: var(--navy);
+    text-align: right; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-family: inherit; background: #fbfcfe;
+  }
+  .field input:focus { outline: none; border-color: var(--navy); background: #fff; }
+  .field-wrap { display: flex; align-items: center; }
+  .field input { width: 128px; }
+  /* hide native spinners; use custom big buttons instead */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+  .spin { display: flex; flex-direction: column; margin-left: 8px; flex-shrink: 0; }
+  .spin button {
+    width: 40px; height: 18px; padding: 0; line-height: 1;
+    border: 1px solid var(--border); background: #eef1f7; color: var(--navy);
+    font-size: 11px; cursor: pointer; font-family: inherit;
+  }
+  .spin button:first-child { border-radius: 6px 6px 0 0; border-bottom: none; }
+  .spin button:last-child { border-radius: 0 0 6px 6px; }
+  .spin button:hover { background: var(--navy); color: #fff; }
+  .spin button:active { background: var(--navy-sub); color: #fff; }
+
+  .result-bar {
+    margin-top: 16px; background: var(--card); border-radius: 10px;
+    padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+    border-left: 6px solid var(--navy);
+  }
+  .result-bar .rb-label { font-size: 15px; font-weight: 800; color: var(--navy); }
+  .result-bar .rb-val { font-size: 30px; font-weight: 900; color: var(--navy); }
+  .result-bar .rb-val small { font-size: 16px; font-weight: 700; margin-left: 4px; }
+
+  .cta {
+    background: var(--navy); color: #fff; border: none;
+    font-size: 16px; font-weight: 800; padding: 13px 30px;
+    border-radius: 8px; cursor: pointer; font-family: inherit;
+    transition: background 0.2s; letter-spacing: 0.04em;
+  }
+  .cta:hover { background: var(--navy-sub); }
+  .cta.green { background: var(--green); }
+  .cta.green:hover { background: #166534; }
+
+  /* ---- page 2 results ---- */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 16px; }
+  .stat {
+    background: var(--card); border-radius: 10px; padding: 16px 18px;
+    border-top: 4px solid var(--navy);
+  }
+  .stat.danger { border-top-color: var(--red); }
+  .stat .s-label { font-size: 13px; font-weight: 800; color: var(--label); letter-spacing: 0.08em; margin-bottom: 6px; }
+  .stat .s-val { font-size: 30px; font-weight: 900; color: var(--navy); line-height: 1; }
+  .stat .s-val small { font-size: 15px; font-weight: 700; margin-left: 3px; }
+  .stat.danger .s-val { color: var(--red); }
+  .stat .s-note { font-size: 12px; color: var(--navy-sub); margin-top: 6px; }
+
+  .chart-area { height: 318px; display: flex; gap: 24px; min-height: 0; }
+  .chart-box { flex: 1; background: #fbfcfe; border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; }
+  .chart-box .ct { font-size: 14px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+  canvas { display: block; width: 100%; }
+  .chart-box canvas { height: 268px; }
+  .verdict {
+    width: 300px; background: var(--navy); border-radius: 10px; padding: 20px;
+    color: #fff; display: flex; flex-direction: column; justify-content: center;
+  }
+  .verdict h3 { font-size: 16px; font-weight: 800; color: var(--accent); margin-bottom: 10px; letter-spacing: 0.06em; }
+  .verdict p { font-size: 14px; line-height: 1.7; color: #dbe4f3; }
+  .verdict .big { font-size: 34px; font-weight: 900; color: #fff; margin: 8px 0; line-height: 1.1; }
+  .verdict .big small { font-size: 15px; }
+
+  /* ---- page 3 simulation ---- */
+  .sim-grid { display: grid; grid-template-columns: 360px 1fr; gap: 30px; flex: 1; min-height: 0; }
+  .sim-form { display: flex; flex-direction: column; gap: 4px; }
+  .sim-target {
+    background: #fff5f5; border: 2px solid var(--red); border-radius: 8px;
+    padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+  }
+  .sim-target label { font-size: 15px; font-weight: 800; color: var(--red); }
+  .sim-target input { width: 150px; font-size: 17px; font-weight: 800; color: var(--red); text-align: right; padding: 6px 10px; border: 1px solid #f3c4c4; border-radius: 6px; font-family: inherit; }
+  .sim-note { font-size: 12px; color: var(--label); margin: 2px 0 8px; }
+  .solve-row { display: flex; gap: 10px; margin-top: 12px; }
+  .solve-row button {
+    flex: 1; border: none; color: #fff; font-size: 13px; font-weight: 800;
+    padding: 11px 6px; border-radius: 7px; cursor: pointer; font-family: inherit;
+  }
+  .solve-row button.b1 { background: #0d9488; }
+  .solve-row button.b2 { background: var(--navy); }
+  .solve-row button.b3 { background: var(--green); }
+  .solve-row button:hover { opacity: 0.88; }
+  .sim-result { background: var(--card); border-radius: 10px; padding: 22px 26px; display: flex; flex-direction: column; }
+  .sim-result .placeholder { margin: auto; color: var(--navy-sub); font-size: 15px; }
+  .sim-answer .sa-label { font-size: 14px; font-weight: 800; color: var(--navy-sub); letter-spacing: 0.06em; }
+  .sim-answer .sa-big { font-size: 46px; font-weight: 900; color: var(--navy); line-height: 1.1; margin: 6px 0 14px; }
+  .sim-answer .sa-big small { font-size: 20px; }
+  .sim-answer .sa-desc { font-size: 14px; color: var(--navy-sub); line-height: 1.8; }
+  .sim-answer .sa-desc b { color: var(--navy); }
+  .sim-answer canvas { height: 170px; margin-top: 12px; }
+
+  .slide-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: auto; padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--label); letter-spacing: 0.05em;
+  }
+
+  /* nav */
+  .nav { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px; z-index: 300; }
+  .nav button {
+    background: var(--navy); border: none; color: white;
+    padding: 9px 28px; border-radius: 5px; font-size: 14px;
+    cursor: pointer; font-family: inherit; white-space: nowrap; transition: background 0.2s;
+  }
+  .nav button:hover { background: var(--navy-sub); }
+  .dots { display: flex; gap: 6px; align-items: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #c4ccd8; cursor: pointer; transition: all 0.2s; }
+  .dot.active { background: var(--navy); width: 20px; border-radius: 4px; }
+
+  /* ---- mobile (smartphone width only) ---- */
+  @media (max-width: 768px) {
+    body { display: block; min-height: 100vh; padding: 0 0 88px; }
+    .slide-wrapper { width: 100%; height: auto; transform: none !important; }
+    .slide-container { position: static; width: 100%; height: auto; }
+    .slide { position: relative; inset: auto; }
+    .slide.active { display: block; opacity: 1; }
+    .slide::before { width: 6px; }
+    .slide-inner { height: auto; padding: 16px 14px 16px 20px; }
+
+    .tabs { gap: 0; overflow-x: auto; }
+    .tab { font-size: 13px; padding: 5px 12px 10px; }
+    .slide-title { font-size: 21px; }
+    .slide-sub { font-size: 13px; }
+
+    /* input header: title and 確認年齢 stack */
+    .input-titlebar { flex-wrap: wrap; gap: 8px 16px; }
+
+    /* form 1 column */
+    .form-grid { grid-template-columns: 1fr; gap: 0; }
+    .field input, .field-wrap input { width: 120px; }
+
+    .result-bar { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .result-bar .rb-val { font-size: 26px; }
+
+    /* page 2 */
+    .stat-row { grid-template-columns: 1fr; gap: 10px; }
+    .chart-area { flex-direction: column; height: auto; gap: 16px; }
+    .chart-box canvas { height: 230px; }
+    .verdict { width: auto; }
+
+    /* page 3 */
+    .sim-grid { grid-template-columns: 1fr; gap: 16px; }
+    .sim-answer .sa-big { font-size: 36px; }
+
+    .nav button { padding: 9px 18px; }
+  }
+
+  @media print {
+    @page { size: A4 landscape; margin: 0; }
+    body { background: #fff; padding: 0; min-height: auto; display: block; }
+    .nav { display: none !important; }
+    .slide-wrapper { transform: none !important; }
+    .slide-container { position: static; }
+    .slide { position: relative; inset: auto; display: flex !important; opacity: 1 !important; page-break-after: always; }
+    .slide:last-child { page-break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="slide-wrapper" id="slideWrapper">
+  <div class="slide-container">
+
+    <!-- ========== SLIDE 1 : INPUT ========== -->
+    <div class="slide active">
+      <div class="slide-inner">
+        <div class="tabs">
+          <div class="tab on">1. 現状の入力</div>
+          <div class="tab">2. 不足額の診断</div>
+          <div class="tab">3. 解決シミュレーション</div>
+        </div>
+        <div class="category">STEP 1 — CURRENT SITUATION</div>
+        <div class="input-titlebar" style="display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:4px;">
+          <h2 class="slide-title" style="margin-bottom:0;">退職後の家計を入力する</h2>
+          <div class="field" style="border-bottom:none; flex:0 0 auto; padding:0; gap:8px;"><label>確認したい年齢</label><div class="field-wrap"><input id="checkAge" type="text" inputmode="numeric" data-fmt="int" step="1" min="0" value="90"><span class="unit">歳</span><span class="spin"><button type="button" onclick="bump('checkAge',1)">▲</button><button type="button" onclick="bump('checkAge',-1)">▼</button></span></div></div>
+        </div>
+        <p class="slide-sub">現在わかっている数字を入力してください。空欄は0として計算します。</p>
+
+        <div class="form-grid">
+          <div class="field"><label>現在の年齢</label><div class="field-wrap"><input id="currentAge" type="text" inputmode="numeric" data-fmt="int" step="1" min="0" value="40"><span class="unit">歳</span><span class="spin"><button type="button" onclick="bump('currentAge',1)">▲</button><button type="button" onclick="bump('currentAge',-1)">▼</button></span></div></div>
+          <div class="field"><label>退職年齢</label><div class="field-wrap"><input id="retireAge" type="text" inputmode="numeric" data-fmt="int" step="1" min="0" value="65"><span class="unit">歳</span><span class="spin"><button type="button" onclick="bump('retireAge',1)">▲</button><button type="button" onclick="bump('retireAge',-1)">▼</button></span></div></div>
+          <div class="field"><label>退職金（退職時受取）</label><div class="field-wrap"><input id="severance" type="text" inputmode="numeric" data-fmt="int" step="1000000" min="0" value="0"><span class="unit">円</span><span class="spin"><button type="button" onclick="bump('severance',1)">▲</button><button type="button" onclick="bump('severance',-1)">▼</button></span></div></div>
+          <div class="field"><label>現在資産（運用中）</label><div class="field-wrap"><input id="currentAssets" type="text" inputmode="numeric" data-fmt="int" step="1000000" min="0" value="0"><span class="unit">円</span><span class="spin"><button type="button" onclick="bump('currentAssets',1)">▲</button><button type="button" onclick="bump('currentAssets',-1)">▼</button></span></div></div>
+          <div class="field"><label>年金（月額）</label><div class="field-wrap"><input id="pension" type="text" inputmode="numeric" data-fmt="int" step="10000" min="0" value="150,000"><span class="unit">円</span><span class="spin"><button type="button" onclick="bump('pension',1)">▲</button><button type="button" onclick="bump('pension',-1)">▼</button></span></div></div>
+          <div class="field"><label>その他月収</label><div class="field-wrap"><input id="otherIncome" type="text" inputmode="numeric" data-fmt="int" step="10000" min="0" value="0"><span class="unit">円</span><span class="spin"><button type="button" onclick="bump('otherIncome',1)">▲</button><button type="button" onclick="bump('otherIncome',-1)">▼</button></span></div></div>
+          <div class="field"><label>毎月の支出</label><div class="field-wrap"><input id="expense" type="text" inputmode="numeric" data-fmt="int" step="10000" min="0" value="250,000"><span class="unit">円</span><span class="spin"><button type="button" onclick="bump('expense',1)">▲</button><button type="button" onclick="bump('expense',-1)">▼</button></span></div></div>
+          <div class="field"><label>5年毎の臨時支出</label><div class="field-wrap"><input id="extraExpense" type="text" inputmode="numeric" data-fmt="int" step="100000" min="0" value="500,000"><span class="unit">円</span><span class="spin"><button type="button" onclick="bump('extraExpense',1)">▲</button><button type="button" onclick="bump('extraExpense',-1)">▼</button></span></div></div>
+          <div class="field"><label>インフレ率</label><div class="field-wrap"><input id="inflation" type="text" inputmode="decimal" data-fmt="pct" step="0.5" min="0" value="0.0"><span class="unit">%</span><span class="spin"><button type="button" onclick="bump('inflation',1)">▲</button><button type="button" onclick="bump('inflation',-1)">▼</button></span></div></div>
+          <div class="field"><label>投資収益率</label><div class="field-wrap"><input id="invReturn" type="text" inputmode="decimal" data-fmt="pct" step="0.5" min="0" value="0.0"><span class="unit">%</span><span class="spin"><button type="button" onclick="bump('invReturn',1)">▲</button><button type="button" onclick="bump('invReturn',-1)">▼</button></span></div></div>
+          <div class="field"><label>年金増加率</label><div class="field-wrap"><input id="pensionGrowth" type="text" inputmode="decimal" data-fmt="pct" step="0.5" min="0" value="0.0"><span class="unit">%</span><span class="spin"><button type="button" onclick="bump('pensionGrowth',1)">▲</button><button type="button" onclick="bump('pensionGrowth',-1)">▼</button></span></div></div>
+        </div>
+
+        <div class="result-bar">
+          <span class="rb-label">退職時に必要な資金（自動計算）</span>
+          <span class="rb-val" id="liveRequired">— <small>円</small></span>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+          <button class="cta" onclick="runAnalysis()">不足額を診断する　→</button>
+        </div>
+
+        <div class="slide-footer"><span>Knowledge Assist Ltd.</span><span>1 / 3</span></div>
+      </div>
+    </div>
+
+    <!-- ========== SLIDE 2 : RESULT ========== -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="tabs">
+          <div class="tab">1. 現状の入力</div>
+          <div class="tab on">2. 不足額の診断</div>
+          <div class="tab">3. 解決シミュレーション</div>
+        </div>
+        <div class="category">STEP 2 — DIAGNOSIS</div>
+        <h2 class="slide-title">退職後、資金はいくら不足するか</h2>
+
+        <div class="stat-row">
+          <div class="stat"><div class="s-label">退職時に必要な資金</div><div class="s-val" id="r-required">—<small>円</small></div><div class="s-note" id="r-required-note"></div></div>
+          <div class="stat"><div class="s-label">退職時の準備資金</div><div class="s-val" id="r-have">—<small>円</small></div><div class="s-note" id="r-have-note">退職金＋現在資産（退職時の見込み）</div></div>
+          <div class="stat danger"><div class="s-label">不足額</div><div class="s-val" id="r-gap">—<small>円</small></div><div class="s-note" id="r-gap-note"></div></div>
+        </div>
+
+        <div class="chart-area">
+          <div class="chart-box">
+            <div class="ct">資産残高の推移（退職〜100歳・現在の準備のままの場合）</div>
+            <canvas id="balanceChart"></canvas>
+          </div>
+          <div class="verdict">
+            <h3>診断結果</h3>
+            <p id="v-text1">—</p>
+            <div class="big" id="v-big">—</div>
+            <p id="v-text2">—</p>
+            <button class="cta green" style="margin-top:16px;" onclick="gotoSim()">解決策をシミュレーション　→</button>
+          </div>
+        </div>
+
+        <div class="slide-footer"><span>Knowledge Assist Ltd.</span><span>2 / 3</span></div>
+      </div>
+    </div>
+
+    <!-- ========== SLIDE 3 : SIMULATION ========== -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="tabs">
+          <div class="tab">1. 現状の入力</div>
+          <div class="tab">2. 不足額の診断</div>
+          <div class="tab on">3. 解決シミュレーション</div>
+        </div>
+        <div class="category">STEP 3 — SIMULATION</div>
+        <h2 class="slide-title">目標達成のための積立シミュレーション</h2>
+        <p class="slide-sub">知りたい項目以外をすべて入力し、下のボタンを押してください。</p>
+
+        <div class="sim-grid">
+          <div class="sim-form">
+            <div class="sim-target">
+              <label>目標金額</label>
+              <div class="field-wrap"><input id="target" type="text" inputmode="numeric" data-fmt="int" step="1000000" min="0" value="20,000,000"><span class="unit">円</span><span class="spin"><button type="button" onclick="bump('target',1)">▲</button><button type="button" onclick="bump('target',-1)">▼</button></span></div>
+            </div>
+            <div class="sim-note">※ 診断した不足額が自動で入ります。編集も可能です。</div>
+            <div class="field"><label>現在の年齢</label><div class="field-wrap"><input id="currentAge2" type="text" inputmode="numeric" data-fmt="int" step="1" min="0" value="40"><span class="unit">歳</span><span class="spin"><button type="button" onclick="bump('currentAge2',1)">▲</button><button type="button" onclick="bump('currentAge2',-1)">▼</button></span></div></div>
+            <div class="sim-note" id="yearsLeft">退職まであと — 年</div>
+            <div class="field"><label>一括投資額</label><div class="field-wrap"><input id="lump" type="text" inputmode="numeric" data-fmt="int" step="1000000" min="0" value="0"><span class="unit">円</span><span class="spin"><button type="button" onclick="bump('lump',1)">▲</button><button type="button" onclick="bump('lump',-1)">▼</button></span></div></div>
+            <div class="field"><label>毎月投資額</label><div class="field-wrap"><input id="monthly" type="text" inputmode="numeric" data-fmt="int" step="10000" min="0" value="0"><span class="unit">円</span><span class="spin"><button type="button" onclick="bump('monthly',1)">▲</button><button type="button" onclick="bump('monthly',-1)">▼</button></span></div></div>
+            <div class="field"><label>年利率</label><div class="field-wrap"><input id="rate" type="text" inputmode="decimal" data-fmt="pct" step="0.5" min="0" value="3.0"><span class="unit">%</span><span class="spin"><button type="button" onclick="bump('rate',1)">▲</button><button type="button" onclick="bump('rate',-1)">▼</button></span></div></div>
+            <div class="solve-row">
+              <button class="b1" onclick="solve('lump')">一括投資額<br>を求める</button>
+              <button class="b2" onclick="solve('monthly')">毎月投資額<br>を求める</button>
+              <button class="b3" onclick="solve('rate')">年利率<br>を求める</button>
+            </div>
+          </div>
+
+          <div class="sim-result" id="simResult">
+            <div class="placeholder">左の項目を入力し、求めたい項目のボタンを押してください。</div>
+          </div>
+        </div>
+
+        <div class="slide-footer"><span>Knowledge Assist Ltd.</span><span>3 / 3</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="nav">
+  <button onclick="prevSlide()">← 前へ</button>
+  <div class="dots">
+    <div class="dot active" onclick="goTo(0)"></div>
+    <div class="dot" onclick="goTo(1)"></div>
+    <div class="dot" onclick="goTo(2)"></div>
+  </div>
+  <button onclick="nextSlide()">次へ →</button>
+</div>
+
+<script>
+/* ---------- scaling ---------- */
+function scaleSlide() {
+  const w = document.getElementById('slideWrapper');
+  if (window.matchMedia('(max-width: 768px)').matches) { w.style.transform = 'none'; return; }
+  const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.95;
+  w.style.transform = `scale(${scale})`;
+}
+scaleSlide();
+window.addEventListener('resize', scaleSlide);
+
+/* ---------- navigation ---------- */
+let current = 0;
+const slides = document.querySelectorAll('.slide');
+const dots = document.querySelectorAll('.dot');
+function update() {
+  slides.forEach((s, i) => s.classList.toggle('active', i === current));
+  dots.forEach((d, i) => d.classList.toggle('active', i === current));
+}
+function nextSlide() { if (current < slides.length - 1) { current++; update(); } }
+function prevSlide() { if (current > 0) { current--; update(); } }
+function goTo(i) { current = i; update(); }
+/* スペースキーはページ送りに使わない（入力欄と競合するため）。入力欄にフォーカスがない時のみ矢印で移動 */
+document.addEventListener('keydown', e => {
+  const t = document.activeElement;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+});
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const parseNum = el => { const v = parseFloat(String(el.value).replace(/,/g, '')); return isNaN(v) ? 0 : v; };
+const num = id => parseNum($(id));
+function fmtField(el) {
+  const v = parseNum(el);
+  el.value = el.dataset.fmt === 'pct' ? v.toFixed(1) : Math.round(v).toLocaleString('ja-JP');
+}
+function bump(id, dir) {
+  const el = $(id);
+  const step = parseFloat(el.getAttribute('step')) || 1;
+  const minAttr = el.getAttribute('min');
+  const min = (minAttr !== null && minAttr !== '') ? parseFloat(minAttr) : -Infinity;
+  let v = parseNum(el) + dir * step;
+  v = Math.round(v / step) * step;
+  if (v < min) v = min;
+  el.value = parseFloat(v.toFixed(4));
+  fmtField(el);
+  el.dispatchEvent(new Event('input'));
+}
+const fmt = n => Math.round(n).toLocaleString('ja-JP');
+function pickup() {
+  return {
+    currentAge: num('currentAge'), retireAge: num('retireAge'), checkAge: num('checkAge'),
+    severance: num('severance'), currentAssets: num('currentAssets'), pension: num('pension'),
+    otherIncome: num('otherIncome'), expense: num('expense'),
+    extraExpense: num('extraExpense'),
+    inflation: num('inflation') / 100,
+    invReturn: num('invReturn') / 100,
+    pensionGrowth: num('pensionGrowth') / 100
+  };
+}
+
+/* ---------- core simulation (page 1 & 2) ---------- */
+function simulate(startBalance, p) {
+  let bal = startBalance;
+  const ages = [p.retireAge], bals = [bal];
+  let minBal = bal, depletionAge = null;
+  const span = Math.max(0, p.checkAge - p.retireAge);
+  for (let k = 0; k < span; k++) {
+    const annualPension = p.pension * 12 * Math.pow(1 + p.pensionGrowth, k);
+    const annualOther = p.otherIncome * 12;
+    const annualExpense = p.expense * 12 * Math.pow(1 + p.inflation, k);
+    let extra = 0;
+    const kN = k + 1;
+    if (kN % 5 === 0) extra = p.extraExpense * Math.pow(1 + p.inflation, kN);
+    const netFlow = annualPension + annualOther - annualExpense - extra;
+    bal = bal * (1 + p.invReturn) + netFlow;
+    ages.push(p.retireAge + kN);
+    bals.push(bal);
+    if (bal < minBal) minBal = bal;
+    if (bal < 0 && depletionAge === null) depletionAge = p.retireAge + kN;
+  }
+  return { ages, bals, minBal, depletionAge };
+}
+/* 退職時に必要な資金 = 確認年齢まで残高がマイナスにならない最小の初期資金 */
+function requiredFund(p) {
+  let lo = 0, hi = 1e11;
+  if (simulate(hi, p).minBal < 0) return hi;
+  for (let i = 0; i < 70; i++) {
+    const mid = (lo + hi) / 2;
+    if (simulate(mid, p).minBal >= -1) hi = mid; else lo = mid;
+  }
+  return hi;
+}
+
+/* live preview of required fund on page 1 */
+function updateLive() {
+  const p = pickup();
+  const req = requiredFund(p);
+  $('liveRequired').innerHTML = fmt(req) + ' <small>円</small>';
+}
+document.querySelectorAll('#currentAge,#retireAge,#checkAge,#severance,#currentAssets,#pension,#otherIncome,#expense,#extraExpense,#inflation,#invReturn,#pensionGrowth')
+  .forEach(el => el.addEventListener('input', updateLive));
+
+/* 現在の年齢はページ1とページ3で共有（双方向同期） */
+$('currentAge').addEventListener('input', () => { $('currentAge2').value = $('currentAge').value; updateYears(); });
+$('currentAge2').addEventListener('input', () => { $('currentAge').value = $('currentAge2').value; updateYears(); });
+$('currentAge2').addEventListener('blur', () => { fmtField($('currentAge')); });
+$('currentAge').addEventListener('blur', () => { $('currentAge2').value = $('currentAge').value; });
+
+let lastGap = 20000000;
+
+function runAnalysis() {
+  const p = pickup();
+  const req = requiredFund(p);
+  const yearsToRetire = Math.max(0, p.retireAge - p.currentAge);
+  const grownAssets = p.currentAssets * Math.pow(1 + p.invReturn, yearsToRetire);
+  const have = p.severance + grownAssets;
+  const gap = Math.max(0, req - have);
+  lastGap = gap;
+
+  $('r-required').innerHTML = fmt(req) + '<small>円</small>';
+  $('r-required-note').textContent = p.checkAge + '歳まで資金が尽きないために必要';
+  $('r-have').innerHTML = fmt(have) + '<small>円</small>';
+  $('r-have-note').textContent = grownAssets > p.currentAssets
+    ? ('退職金＋現在資産' + fmt(p.currentAssets) + '円の運用後' + fmt(grownAssets) + '円')
+    : '退職金＋現在資産（退職時の見込み）';
+  $('r-gap').innerHTML = fmt(gap) + '<small>円</small>';
+
+  const chartEnd = Math.max(100, p.checkAge);
+  const sim = simulate(have, { ...p, checkAge: chartEnd });
+  $('r-gap-note').textContent = sim.depletionAge
+    ? ('このままだと ' + sim.depletionAge + '歳 で資金が枯渇')
+    : (p.checkAge + '歳まで資金は持続します');
+
+  /* verdict text */
+  if (gap <= 0) {
+    $('v-text1').textContent = '現在の準備で、目標年齢まで資金は不足しません。';
+    $('v-big').textContent = '不足なし';
+    $('v-text2').textContent = '余裕資金の運用や、ゆとり支出の上乗せも検討できます。';
+  } else {
+    $('v-text1').textContent = '退職までに、あと';
+    $('v-big').innerHTML = fmt(gap) + ' <small>円</small>';
+    $('v-text2').textContent = 'の準備が必要です。次のページで毎月いくら積み立てれば届くかを試算します。';
+  }
+
+  /* hand off to page 3 */
+  $('target').value = Math.round(gap);
+  fmtField($('target'));
+  updateYears();
+  current = 1; update();
+  requestAnimationFrame(() => drawBalanceChart(sim, p.checkAge));
+}
+
+/* ---------- chart ---------- */
+function drawBalanceChart(sim, markAge) {
+  const cv = $('balanceChart');
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const padL = 56, padR = 14, padT = 18, padB = 26;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const ages = sim.ages, ys = sim.bals;
+  const n = ys.length;
+  const maxY = Math.max(0, ...ys), minY = Math.min(0, ...ys);
+  const rangeY = (maxY - minY) || 1;
+  const Y = v => padT + plotH * (1 - (v - minY) / rangeY);
+  const band = plotW / n;
+  const barW = Math.max(2, band * 0.66);
+
+  /* grid + y labels */
+  ctx.strokeStyle = '#e6eaf1'; ctx.fillStyle = '#4a5e78';
+  ctx.font = '11px sans-serif'; ctx.textAlign = 'right'; ctx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const v = minY + (rangeY * g) / 4;
+    const y = Y(v);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.fillText((Math.round(v / 10000)).toLocaleString('ja-JP') + '万', padL - 6, y + 3);
+  }
+
+  /* bars: green if positive, red if negative */
+  const yZero = Y(0);
+  for (let i = 0; i < n; i++) {
+    const v = ys[i];
+    const x = padL + i * band + (band - barW) / 2;
+    const y = Y(v);
+    ctx.fillStyle = v >= 0 ? '#15803d' : '#dc2626';
+    if (v >= 0) ctx.fillRect(x, y, barW, yZero - y);
+    else ctx.fillRect(x, yZero, barW, y - yZero);
+  }
+
+  /* zero line */
+  ctx.strokeStyle = '#9aa5b4'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(padL, yZero); ctx.lineTo(W - padR, yZero); ctx.stroke();
+
+  /* x labels every 5 years */
+  ctx.fillStyle = '#4a5e78'; ctx.textAlign = 'center'; ctx.font = '11px sans-serif';
+  for (let i = 0; i < n; i++) {
+    if (ages[i] % 5 === 0) ctx.fillText(ages[i] + '歳', padL + i * band + band / 2, H - 8);
+  }
+
+  /* red dashed line at 確認したい年齢 */
+  const mi = ages.indexOf(markAge);
+  if (mi >= 0) {
+    const x = padL + mi * band + band / 2;
+    ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(x, padT - 4); ctx.lineTo(x, H - padB); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#dc2626'; ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = x > W - 70 ? 'right' : 'center';
+    ctx.fillText('確認 ' + markAge + '歳', x, padT - 7);
+  }
+}
+
+/* ---------- page 3 simulation ---------- */
+function updateYears() {
+  const yrs = Math.max(0, num('retireAge') - num('currentAge'));
+  $('yearsLeft').textContent = '退職まであと ' + yrs + ' 年';
+  return yrs;
+}
+['currentAge', 'retireAge'].forEach(id => $(id).addEventListener('input', updateYears));
+
+function gotoSim() { $('target').value = Math.round(lastGap); fmtField($('target')); updateYears(); current = 2; update(); }
+
+function fvFactor(i, N) { return i === 0 ? N : (Math.pow(1 + i, N) - 1) / i; }
+
+function solve(which) {
+  const target = num('target');
+  const years = Math.max(0, num('retireAge') - num('currentAge'));
+  const N = years * 12;
+  const lump = num('lump');
+  const monthly = num('monthly');
+  const i = num('rate') / 100 / 12;
+
+  if (years <= 0) { showSim('error', '現在の年齢が退職年齢以上です。期間がありません。'); return; }
+
+  let ansLabel, ansVal, ansUnit, desc;
+  const grow = Math.pow(1 + i, N);
+
+  if (which === 'lump') {
+    const need = (target - monthly * fvFactor(i, N)) / grow;
+    ansLabel = '今すぐ必要な一括投資額';
+    ansVal = Math.max(0, need); ansUnit = '円';
+    desc = `毎月 <b>${fmt(monthly)}円</b> を年利 <b>${num('rate')}%</b> で ${years} 年間積み立てる場合、` +
+           `今 <b>${fmt(Math.max(0,need))}円</b> をまとめて投資すれば目標 ${fmt(target)}円 に到達します。`;
+    if (need < 0) desc = `毎月の積立だけで目標を超えます。一括投資は不要です（毎月 ${fmt(monthly)}円で十分）。`;
+  } else if (which === 'monthly') {
+    const need = (target - lump * grow) / fvFactor(i, N);
+    ansLabel = '毎月必要な積立額';
+    ansVal = Math.max(0, need); ansUnit = '円 / 月';
+    desc = `一括 <b>${fmt(lump)}円</b> を年利 <b>${num('rate')}%</b> で運用しつつ、` +
+           `毎月 <b>${fmt(Math.max(0,need))}円</b> を ${years} 年間積み立てると目標 ${fmt(target)}円 に到達します。`;
+    if (need < 0) desc = `一括投資だけで目標に到達します。毎月の積立は不要です。`;
+  } else { /* rate */
+    let lo = 0, hi = 0.5, r = 0;
+    const fvAt = rr => { const ii = rr / 12; return lump * Math.pow(1 + ii, N) + monthly * fvFactor(ii, N); };
+    if (fvAt(0) >= target) {
+      ansLabel = '必要な年利率'; ansVal = 0; ansUnit = '%';
+      desc = `運用なし（年利0%）でも目標 ${fmt(target)}円 に到達します。`;
+      showSim('ok', ansLabel, fmt(0), ansUnit, desc, { lump, monthly, i: 0, N, years, target });
+      return;
+    }
+    if (fvAt(hi) < target) { showSim('error', '年利50%でも目標に届きません。一括／毎月の額を増やしてください。'); return; }
+    for (let k = 0; k < 80; k++) { const mid = (lo + hi) / 2; if (fvAt(mid) >= target) hi = mid; else lo = mid; r = mid; }
+    const pct = (hi * 100);
+    ansLabel = '必要な年利率'; ansVal = pct; ansUnit = '%';
+    desc = `一括 <b>${fmt(lump)}円</b>＋毎月 <b>${fmt(monthly)}円</b> を ${years} 年間運用して目標 ${fmt(target)}円 に届けるには、` +
+           `年利 <b>${pct.toFixed(2)}%</b> の運用が必要です。`;
+    showSim('ok', ansLabel, pct.toFixed(2), ansUnit, desc, { lump, monthly, i: hi / 12, N, years, target });
+    return;
+  }
+
+  showSim('ok', ansLabel, fmt(ansVal), ansUnit, desc,
+    { lump: which === 'lump' ? Math.max(0, ansVal) : lump,
+      monthly: which === 'monthly' ? Math.max(0, ansVal) : monthly,
+      i, N, years, target });
+}
+
+function showSim(type, a, b, c, d, proj) {
+  const box = $('simResult');
+  if (type === 'error') {
+    box.innerHTML = `<div class="placeholder" style="color:#dc2626;font-weight:700;">${a}</div>`;
+    return;
+  }
+  box.innerHTML =
+    `<div class="sim-answer" style="display:flex;flex-direction:column;height:100%;">
+       <div class="sa-label">${a}</div>
+       <div class="sa-big">${b} <small>${c}</small></div>
+       <div class="sa-desc">${d}</div>
+       <canvas id="growChart"></canvas>
+     </div>`;
+  if (proj) drawGrowth(proj);
+}
+
+function drawGrowth(p) {
+  const cv = $('growChart');
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
+
+  const pts = [];
+  for (let y = 0; y <= p.years; y++) {
+    const m = y * 12;
+    const v = p.lump * Math.pow(1 + p.i, m) + p.monthly * fvFactor(p.i, m);
+    pts.push(v);
+  }
+  const padL = 52, padR = 12, padT = 10, padB = 22;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxY = Math.max(p.target, ...pts) || 1;
+  const X = i => padL + plotW * i / (pts.length - 1 || 1);
+  const Y = v => padT + plotH * (1 - v / maxY);
+
+  ctx.strokeStyle = '#e6eaf1'; ctx.fillStyle = '#4a5e78'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+  for (let g = 0; g <= 3; g++) { const v = maxY * g / 3, y = Y(v);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.fillText(Math.round(v / 10000).toLocaleString('ja-JP') + '万', padL - 6, y + 3); }
+
+  /* target line */
+  const yt = Y(p.target);
+  ctx.strokeStyle = '#dc2626'; ctx.setLineDash([5, 3]); ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(padL, yt); ctx.lineTo(W - padR, yt); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#dc2626'; ctx.textAlign = 'left'; ctx.font = 'bold 11px sans-serif';
+  ctx.fillText('目標', padL + 4, yt - 4);
+
+  /* growth area + line */
+  ctx.beginPath(); ctx.moveTo(X(0), Y(0));
+  for (let i = 0; i < pts.length; i++) ctx.lineTo(X(i), Y(pts[i]));
+  ctx.lineTo(X(pts.length - 1), Y(0)); ctx.closePath();
+  ctx.fillStyle = 'rgba(21,128,61,0.12)'; ctx.fill();
+  ctx.beginPath();
+  for (let i = 0; i < pts.length; i++) { const x = X(i), y = Y(pts[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.strokeStyle = '#15803d'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  ctx.fillStyle = '#4a5e78'; ctx.textAlign = 'center'; ctx.font = '11px sans-serif';
+  ctx.fillText('現在', X(0), H - 6);
+  ctx.fillText(p.years + '年後', X(pts.length - 1), H - 6);
+}
+
+/* init: format all inputs and reformat on blur */
+document.querySelectorAll('input[data-fmt]').forEach(el => {
+  el.addEventListener('blur', () => fmtField(el));
+  fmtField(el);
+});
+updateLive();
+updateYears();
+</script>
+</body>
+</html>
